@@ -43,4 +43,17 @@ class User extends Authenticatable implements LaratrustUser
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    // Events created by the user (organizer)
+    public function organizedEvents()
+    {
+        return $this->hasMany(Event::class, 'organizer_id');
+    }
+
+    // Events the user is participating in
+    public function eventsParticipating()
+    {
+        return $this->belongsToMany(Event::class, 'events_users')
+            ->withTimestamps();
+    }
 }
