@@ -28,8 +28,8 @@ class Event extends Model
         return $this->belongsTo(User::class, 'organizer_id');
     }
 
-    // Each event can have many participants (users)
-    public function participants()
+    // Each event can have many attendees (users)
+    public function attendees()
     {
         return $this->belongsToMany(User::class, 'events_users')
             ->withTimestamps();
