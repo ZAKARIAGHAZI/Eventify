@@ -65,9 +65,6 @@ const LoginForm = () => {
               <label className="text-sm font-medium" htmlFor="password">
                 Password
               </label>
-              <a className="text-sm text-purple-400 hover:underline" href="#">
-                Forgot password?
-              </a>
             </div>
             <input
               type="password"

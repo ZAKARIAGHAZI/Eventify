@@ -3,40 +3,30 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use App\Models\Event;
 
 class EventRegistrationNotification extends Notification
 {
     use Queueable;
 
-    public $event;
+    protected $event;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct($event)
+    public function __construct(Event $event)
     {
         $this->event = $event;
     }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
+    // Define the channels
+    public function via($notifiable)
     {
-        return ['database', 'mail'];
+        return ['database', 'mail']; // database for in-app, mail for email
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
+    // Define the database payload
+    public function toDatabase($notifiable)
     {
         return [
             'event_id' => $this->event->id,
@@ -45,5 +35,18 @@ class EventRegistrationNotification extends Notification
             'start_time' => $this->event->start_time,
             'location' => $this->event->location,
         ];
+    }
+
+    // Define the mail message
+    public function toMail($notifiable)
+    {
+        return (new MailMessage)
+            ->subject('Event Registration Confirmation')
+            ->greeting('Hello ' . $notifiable->name)
+            ->line('You have successfully registered for the event: ' . $this->event->title)
+            ->line('Start time: ' . $this->event->start_time)
+            ->line('Location: ' . $this->event->location)
+            ->action('View Event', url('/events/' . $this->event->id))
+            ->line('Thank you for using our application!');
     }
 }

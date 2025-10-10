@@ -75,7 +75,7 @@ class EventController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'price' => $request->price ?? 0,
-            'available_seats' => $request->available_seats ?? 0,
+            'available_seats' => $request->available_seats ?? 50,
             'status' => $request->status ?? 'draft',
             'image' => $path,
             'organizer_id' => auth()->id(),
@@ -93,8 +93,16 @@ class EventController extends Controller
      */
     public function show(Event $event)
     {
+        $user = Auth::user();
+
         $event->load('organizer', 'attendees');
 
+        // Check if the authenticated user is registered for this event
+        $event->is_registered = $user
+            ? $event->attendees->contains($user->id)
+            : false;
+
+            
         return response()->json([
             'status' => 'success',
             'event' => $event
