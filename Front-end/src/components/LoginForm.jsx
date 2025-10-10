@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,19 +21,21 @@ const LoginForm = () => {
       const { token, user } = response.data;
 
       if (token && user) {
-        // ✅ Store token and user data (with role)
         localStorage.setItem("auth_token", token);
         localStorage.setItem("user", JSON.stringify(user));
 
-        alert(`Welcome back, ${user.name}!`);
-        const role = response.data.roles[0]; // "organizer" or "user"
+        // Get role from user.roles
+        const role =
+          user.roles && user.roles.length > 0 ? user.roles[0] : "user";
         localStorage.setItem("role", role);
 
-        // ✅ Redirect based on role
+        alert(`Welcome back, ${user.name}!`);
+
+        // Redirect based on role using React Router
         if (role === "organizer") {
-          window.location.href = "/organizer/dashboard";
+          navigate("/organizer/dashboard");
         } else {
-          window.location.href = "/";
+          navigate("/explore");
         }
       } else {
         setError("Invalid response from server.");
@@ -68,8 +72,8 @@ const LoginForm = () => {
               placeholder="you@example.com"
               required
               className="mt-1 block w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 
-              border-transparent focus:ring-purple-400 focus:border-purple-400 
-              placeholder-gray-400 dark:placeholder-gray-500"
+                border-transparent focus:ring-purple-400 focus:border-purple-400 
+                placeholder-gray-400 dark:placeholder-gray-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -86,8 +90,8 @@ const LoginForm = () => {
               placeholder="••••••••"
               required
               className="mt-1 block w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 
-              border-transparent focus:ring-purple-400 focus:border-purple-400 
-              placeholder-gray-400 dark:placeholder-gray-500"
+                border-transparent focus:ring-purple-400 focus:border-purple-400 
+                placeholder-gray-400 dark:placeholder-gray-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -98,9 +102,9 @@ const LoginForm = () => {
             <button
               type="submit"
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm 
-              text-sm font-bold text-white bg-purple-500 hover:bg-purple-600 
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 
-              dark:focus:ring-offset-gray-800"
+                text-sm font-bold text-white bg-purple-500 hover:bg-purple-600 
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 
+                dark:focus:ring-offset-gray-800"
             >
               Log In
             </button>

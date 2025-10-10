@@ -257,4 +257,18 @@ class EventController extends Controller
             'message' => 'You have successfully unregistered from the event'
         ], 200);
     }
+
+    public function organizerEvents(Request $request)
+    {
+        $user = $request->user();
+
+        // Get only events created by this organizer
+        $events = Event::where('user_id', $user->id)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json([
+            'events' => $events
+        ]);
+    }
 }

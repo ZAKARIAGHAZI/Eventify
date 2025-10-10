@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,6 +15,12 @@ const RegisterForm = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Basic client-side email check
+    if (!email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
 
     try {
       const response = await axios.post("http://127.0.0.1:8000/api/register", {
@@ -26,21 +35,29 @@ const RegisterForm = () => {
 
       if (token && user) {
         localStorage.setItem("auth_token", token);
-        localStorage.setItem("user", JSON.stringify(user)); // 👈 store user with role
+        localStorage.setItem("user", JSON.stringify(user));
       }
 
-     
+      alert(`Welcome, ${user.name}! You are registered as a ${role}.`);
 
-      alert(`Welcome, ${user.name}! You are registered as an ${role}.`);
-
-      // Redirect based on role
+      // Redirect based on role using React Router
       if (role === "organizer") {
-        window.location.href = "/organizer/dashboard";
+        navigate("/organizer/dashboard");
       } else {
-        window.location.href = "/explore";
+        navigate("/explore");
       }
     } catch (err) {
       console.error(err);
+
+      // Laravel unique email error comes in response.data.message
+      if (err.response?.status === 422) {
+        const errors = err.response.data.errors;
+        if (errors && errors.email) {
+          setError(errors.email[0]); // "The email has already been taken."
+          return;
+        }
+      }
+
       setError(err.response?.data?.message || "Registration failed");
     }
   };

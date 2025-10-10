@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/events', [EventController::class, 'store']);    // Create event
     Route::put('/events/{event}', [EventController::class, 'update']); // Update event
     Route::delete('/events/{event}', [EventController::class, 'destroy']); // Delete event
+    Route::get('/organizer/events', [EventController::class, 'organizerEvents']); // Organizer's events 
 
     // Registration routes (for users)
     Route::post('/events/{event}/register', [EventController::class, 'register']);
