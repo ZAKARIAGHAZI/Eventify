@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
+            $table->string('image')->nullable();
             $table->string('location');
             $table->string('category');
             $table->dateTime('start_time');

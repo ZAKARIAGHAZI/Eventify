@@ -4,29 +4,37 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Mail\EventRegistrationMail;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EventUnregistrationMail;
+use App\Notifications\EventRegistrationNotification;
+use App\Notifications\EventUnregistrationNotification;
 
 class EventController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of events with optional filters.
      */
     public function index(Request $request)
     {
         $query = Event::query();
 
         // Optional filters
-        if ($request->has('category')) {
+        if ($request->filled('category')) {
             $query->where('category', $request->category);
         }
-        if ($request->has('location')) {
+
+        if ($request->filled('location')) {
             $query->where('location', 'like', "%{$request->location}%");
         }
-        if ($request->has('status')) {
+
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Eager load organizer relationship (if exists)
+        // Eager load organizer relation
         $events = $query->with('organizer')
             ->latest()
             ->paginate(5);
@@ -42,59 +50,46 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Authentication required'
-            ], 401);
-        }
-
-        if (!$user->hasRole('organizer')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You are not authorized to create an event'
-            ], 403);
-        }
-
-        $validated = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string|max:1000',
-            'location' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
-            'start_time' => 'required|date|after:now',
-            'end_time' => 'required|date|after:start_time',
-            'price' => 'required|numeric|min:0',
-            'available_seats' => 'required|integer|min:1',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after_or_equal:start_time',
+            'location' => 'required|string',
+            'category' => 'required|string',
+            'price' => 'nullable|numeric',
+            'available_seats' => 'nullable|integer',
+            'status' => 'nullable|in:draft,published,cancelled',
         ]);
 
-        // Prevent duplicates (same title & time)
-        $exists = Event::where('title', $validated['title'])
-            ->where('start_time', $validated['start_time'])
-            ->where('end_time', $validated['end_time'])
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Event already exists'
-            ], 409);
+        $path = null;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('events', 'public');
         }
 
-        $validated['organizer_id'] = $user->id;
-
-        $event = Event::create($validated);
+        $event = Event::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'location' => $request->location,
+            'category' => $request->category,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'price' => $request->price ?? 0,
+            'available_seats' => $request->available_seats ?? 0,
+            'status' => $request->status ?? 'draft',
+            'image' => $path,
+            'organizer_id' => auth()->id(),
+        ]);
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Event created successfully',
+            'success' => true,
             'event' => $event
-        ], 201);
+        ]);
     }
 
+
     /**
-     * Display the specified event.
+     * Display a specific event.
      */
     public function show(Event $event)
     {
@@ -129,6 +124,7 @@ class EventController extends Controller
             'end_time' => 'sometimes|date|after:start_time',
             'price' => 'sometimes|numeric|min:0',
             'available_seats' => 'sometimes|integer|min:1',
+            'status' => 'sometimes|in:draft,published,cancelled'
         ]);
 
         $event->update($validated);
@@ -141,7 +137,7 @@ class EventController extends Controller
     }
 
     /**
-     * Remove the specified event from storage.
+     * Remove the specified event.
      */
     public function destroy(Event $event)
     {
@@ -163,7 +159,7 @@ class EventController extends Controller
     }
 
     /**
-     * Register the authenticated user to an event.
+     * Register the authenticated user for an event.
      */
     public function register(Event $event)
     {
@@ -176,26 +172,42 @@ class EventController extends Controller
             ], 401);
         }
 
-        if ($event->attendees()->where('user_id', $user->id)->exists()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You are already registered for this event'
-            ], 409);
-        }
+        try {
+            DB::transaction(function () use ($event, $user) {
+                // Lock event row to prevent race conditions
+                $event = Event::lockForUpdate()->find($event->id);
 
-        if ($event->available_seats <= 0) {
+                // Check if user is already registered
+                if ($event->attendees()->where('user_id', $user->id)->exists()) {
+                    throw new \Exception('You are already registered for this event');
+                }
+
+                // Check if seats are available
+                if ($event->available_seats <= 0) {
+                    throw new \Exception('No seats available');
+                }
+
+                // Attach user and decrement seat count
+                $event->attendees()->attach($user->id);
+                $event->decrement('available_seats');
+
+                // Send email confirmation
+                Mail::to($user->email)->send(new EventRegistrationMail($event));
+
+                // Send in-app notification
+                $user->notify(new EventRegistrationNotification($event));
+            });
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No seats available'
+                'message' => $e->getMessage()
             ], 400);
         }
 
-        $event->attendees()->attach($user->id);
-
         return response()->json([
             'status' => 'success',
-            'message' => 'Registered successfully'
-        ]);
+            'message' => 'You have successfully registered for this event'
+        ], 200);
     }
 
     /**
@@ -212,11 +224,29 @@ class EventController extends Controller
             ], 401);
         }
 
-        $event->attendees()->detach($user->id);
+        // Check if user is registered
+        if (!$event->attendees()->where('user_id', $user->id)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You are not registered for this event'
+            ], 400);
+        }
+
+        DB::transaction(function () use ($event, $user) {
+            // Detach user and increment seats
+            $event->attendees()->detach($user->id);
+            $event->increment('available_seats');
+
+            // Send email notification
+            Mail::to($user->email)->send(new EventUnregistrationMail($event));
+
+            // Send in-app notification
+            $user->notify(new EventUnregistrationNotification($event));
+        });
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Unregistered successfully'
-        ]);
+            'message' => 'You have successfully unregistered from the event'
+        ], 200);
     }
 }

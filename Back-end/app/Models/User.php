@@ -51,7 +51,7 @@ class User extends Authenticatable implements LaratrustUser
     }
 
     // Events the user is participating in
-    public function eventsParticipating()
+    public function events()
     {
         return $this->belongsToMany(Event::class, 'events_users')
             ->withTimestamps();

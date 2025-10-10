@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 const LandingPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
-      <Navbar />
+      <Navbar user={null} />
       {/* Hero Section */}
       <section className="flex flex-col-reverse md:flex-row items-center justify-between px-6 md:px-20 py-16 md:py-32">
         <div className="md:w-1/2 space-y-6">
