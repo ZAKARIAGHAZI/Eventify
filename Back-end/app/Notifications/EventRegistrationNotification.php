@@ -22,7 +22,7 @@ class EventRegistrationNotification extends Notification
     // Define the channels
     public function via($notifiable)
     {
-        return ['database', 'mail']; // database for in-app, mail for email
+        return ['database']; // database for in-app
     }
 
     // Define the database payload

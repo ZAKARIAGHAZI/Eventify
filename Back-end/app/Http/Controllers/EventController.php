@@ -99,10 +99,10 @@ class EventController extends Controller
 
         // Check if the authenticated user is registered for this event
         $event->is_registered = $user
-            ? $event->attendees->contains($user->id)
+            ? $event->attendees()->where('user_id', $user->id)->exists()
             : false;
 
-            
+
         return response()->json([
             'status' => 'success',
             'event' => $event

@@ -21,7 +21,6 @@ const EventDetails = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Helper: check if user is logged in
   const isLoggedIn = !!localStorage.getItem("auth_token");
 
   // Fetch event details
@@ -47,7 +46,7 @@ const EventDetails = () => {
     fetchEvent();
   }, [id]);
 
-  // Handle register/unregister actions
+  // Register/Unregister handler
   const handleAction = async () => {
     if (!isLoggedIn) {
       navigate("/login");
@@ -61,23 +60,36 @@ const EventDetails = () => {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
       };
+
       if (event.is_registered) {
         await axios.post(
           `http://localhost:8000/api/events/${id}/unregister`,
           {},
           { headers }
         );
+        setEvent({
+          ...event,
+          is_registered: false,
+          available_seats: event.available_seats + 1,
+        });
         alert("You have successfully unregistered.");
       } else {
+        if (event.available_seats <= 0) {
+          alert("No seats available.");
+          return;
+        }
         await axios.post(
           `http://localhost:8000/api/events/${id}/register`,
           {},
           { headers }
         );
+        setEvent({
+          ...event,
+          is_registered: true,
+          available_seats: event.available_seats - 1,
+        });
         alert("You have successfully registered.");
       }
-      // Re-fetch event to update is_registered
-      await fetchEvent();
     } catch (err) {
       alert(err.response?.data?.message || "Action failed. Please try again.");
     } finally {
@@ -100,7 +112,9 @@ const EventDetails = () => {
       <div className="text-center text-gray-500 mt-20">Event not found.</div>
     );
 
-  // Button text & style based on registration
+  const isFree = event.price_type === "free" || event.price === 0;
+  const priceDisplay = isFree ? "FREE" : `$${event.price || "N/A"}`;
+
   const buttonText = !isLoggedIn
     ? "Login to Register"
     : event.is_registered
@@ -112,9 +126,6 @@ const EventDetails = () => {
     : event.is_registered
     ? "bg-red-500 hover:bg-red-600"
     : "bg-purple-600 hover:bg-purple-700";
-
-  const isFree = event.price_type === "free" || event.price === 0;
-  const priceDisplay = isFree ? "FREE" : `$${event.price || "N/A"}`;
 
   return (
     <>
@@ -175,13 +186,20 @@ const EventDetails = () => {
                   <h3 className="font-extrabold text-2xl mb-2">
                     {isFree ? "Free Entry" : "General Admission"}
                   </h3>
-                  <p className="text-5xl font-extrabold text-purple-700 mb-6">
+                  <p className="text-5xl font-extrabold text-purple-700 mb-2">
                     {priceDisplay}
+                  </p>
+
+                  {/* Available seats */}
+                  <p className="text-gray-700 dark:text-gray-300 mb-6">
+                    Available Seats: {event.available_seats}
                   </p>
 
                   <button
                     onClick={handleAction}
-                    disabled={actionLoading || !isLoggedIn}
+                    disabled={
+                      actionLoading || !isLoggedIn || event.available_seats <= 0
+                    }
                     className={`w-full py-3 text-lg font-bold text-white rounded-xl transition ${buttonColorClass} ${
                       actionLoading ? "opacity-70 cursor-not-allowed" : ""
                     }`}
@@ -193,9 +211,21 @@ const EventDetails = () => {
                     )}
                   </button>
 
-                  {event.is_registered && isLoggedIn && (
-                    <p className="mt-3 text-center text-green-600 dark:text-green-400 font-medium">
-                      You are successfully registered for this event.
+                  {isLoggedIn && (
+                    <p
+                      className={`mt-3 text-center text-sm font-medium ${
+                        event.is_registered
+                          ? "text-green-600 dark:text-green-400"
+                          : event.available_seats <= 0
+                          ? "text-red-500 dark:text-red-400"
+                          : "text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      {event.is_registered
+                        ? "You are successfully registered for this event."
+                        : event.available_seats <= 0
+                        ? "No seats available."
+                        : "Register to secure your spot."}
                     </p>
                   )}
                 </div>

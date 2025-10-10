@@ -28,7 +28,7 @@ class EventUnregistrationNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return ['database'];
     }
     /**
      * Get the array representation of the notification.
