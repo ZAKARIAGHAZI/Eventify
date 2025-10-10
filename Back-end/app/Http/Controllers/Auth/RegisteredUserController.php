@@ -38,7 +38,12 @@ class RegisteredUserController extends Controller
 
         return response()->json([
             'message' => 'User registered successfully',
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name'), // <-- include roles
+            ],
             'token' => $token
         ], 201);
     }

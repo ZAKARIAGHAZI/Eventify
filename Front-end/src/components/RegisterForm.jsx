@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-
 const RegisterForm = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("user"); // NEW state for role selection
+  const [role, setRole] = useState("user"); // default: user
   const [error, setError] = useState("");
 
   const handleRegister = async (e) => {
@@ -15,23 +14,31 @@ const RegisterForm = () => {
     setError("");
 
     try {
-      // API call with the selected role included in the payload
       const response = await axios.post("http://127.0.0.1:8000/api/register", {
         name,
         email,
         password,
         password_confirmation: confirmPassword,
-        role, 
+        role,
       });
 
-      if (response.data.token) {
-        localStorage.setItem("auth_token", response.data.token);
+      const { token, user } = response.data;
+
+      if (token && user) {
+        localStorage.setItem("auth_token", token);
+        localStorage.setItem("user", JSON.stringify(user)); // 👈 store user with role
       }
 
-      alert(
-        `Welcome, ${response.data.user.name}! Registration successful as a ${role}.`
-      );
-      window.location.href = "/login";
+     
+
+      alert(`Welcome, ${user.name}! You are registered as an ${role}.`);
+
+      // Redirect based on role
+      if (role === "organizer") {
+        window.location.href = "/organizer/dashboard";
+      } else {
+        window.location.href = "/explore";
+      }
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || "Registration failed");
@@ -58,37 +65,33 @@ const RegisterForm = () => {
             Register as:
           </label>
           <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 space-x-2">
-            {/* User Role */}
             <button
               type="button"
               onClick={() => setRole("user")}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all 
-                        ${
-                          role === "user"
-                            ? "bg-purple-500 text-white shadow-lg"
-                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                        }`}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                role === "user"
+                  ? "bg-purple-500 text-white shadow-lg"
+                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
             >
-              <span className="truncate">User (Attendee)</span>
+              User (Attendee)
             </button>
 
-            {/* organizer Role */}
             <button
               type="button"
               onClick={() => setRole("organizer")}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all 
-                        ${
-                          role === "organizer"
-                            ? "bg-purple-500 text-white shadow-lg"
-                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-                        }`}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                role === "organizer"
+                  ? "bg-purple-500 text-white shadow-lg"
+                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
             >
-              <span className="truncate">organizer (Host)</span>
+              Organizer (Host)
             </button>
           </div>
         </div>
-        {/* End Role Selection */}
 
+        {/* Name */}
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="name">
             Name
@@ -98,12 +101,14 @@ const RegisterForm = () => {
             type="text"
             placeholder="Enter your name"
             required
-            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
+            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 
+            focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
 
+        {/* Email */}
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="email">
             Email address
@@ -113,12 +118,14 @@ const RegisterForm = () => {
             type="email"
             placeholder="Enter your email"
             required
-            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
+            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 
+            focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
+        {/* Password */}
         <div>
           <label className="block text-sm font-medium mb-2" htmlFor="password">
             Password
@@ -128,12 +135,14 @@ const RegisterForm = () => {
             type="password"
             placeholder="Enter your password"
             required
-            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
+            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 
+            focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
 
+        {/* Confirm Password */}
         <div>
           <label
             className="block text-sm font-medium mb-2"
@@ -146,16 +155,21 @@ const RegisterForm = () => {
             type="password"
             placeholder="Confirm your password"
             required
-            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
+            className="w-full h-12 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 
+            focus:ring-2 focus:ring-purple-500 placeholder-gray-400 dark:placeholder-gray-500 transition-shadow"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
         </div>
 
+        {/* Submit */}
         <div>
           <button
             type="submit"
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 transition-colors"
+            className="w-full flex justify-center py-3 px-4 rounded-lg shadow-sm 
+            text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
+            focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 transition-colors"
           >
             Register
           </button>

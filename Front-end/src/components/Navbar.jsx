@@ -1,13 +1,42 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import SearchIcon from "@mui/icons-material/Search";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Navbar = ({ user }) => {
-  // Helper function to capitalize the role for display
+  const navigate = useNavigate();
+
+  // Capitalize the role for display
   const formatRole = (role) => {
     if (!role) return "";
     return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  // 🧹 Logout function
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+
+      await axios.post(
+        "http://127.0.0.1:8000/api/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Clear local storage
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+
+      // Redirect to main page
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Something went wrong while logging out.");
+    }
   };
 
   return (
@@ -28,20 +57,10 @@ const Navbar = ({ user }) => {
         </h1>
       </div>
 
-      {/* Logged in State */}
+      {/* Logged in */}
       {user ? (
-        <div className="flex items-center gap-4 sm:gap-6 w-full justify-end">
-          {/* Search bar (Desktop only) */}
-          <div className="relative hidden md:block w-1/3 max-w-sm">
-            <input
-              type="text"
-              placeholder="Search events..."
-              className="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 h-5 w-5" />
-          </div>
-
-          {/* Navigation links (Desktop only) */}
+        <div className="flex items-center gap-6 w-full justify-end">
+          {/* Navigation links */}
           <nav className="hidden md:flex items-center gap-6">
             <Link className="text-sm font-medium hover:text-purple-400" to="/">
               Home
@@ -52,7 +71,8 @@ const Navbar = ({ user }) => {
             >
               Explore
             </Link>
-            {/* Show 'Create Event' link only if the user is an organizer */}
+
+            {/* Show "Create Event" only for organizers */}
             {user.role === "organizer" && (
               <Link
                 className="text-sm font-medium hover:text-purple-400"
@@ -63,15 +83,8 @@ const Navbar = ({ user }) => {
             )}
           </nav>
 
-          {/* Notification icon */}
-          <button className="relative p-1">
-            <NotificationsIcon className="text-gray-600 dark:text-gray-300 hover:text-purple-400 transition-colors h-6 w-6" />
-            <span className="absolute top-0 right-0 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
-          {/* User Info & Logout Group */}
+          {/* User + Logout */}
           <div className="flex items-center gap-3">
-            {/* User Name & Role Display */}
             <span className="text-sm font-bold text-gray-800 dark:text-gray-100 hidden sm:block">
               {user.name}
               <span className="text-purple-500 dark:text-purple-400 font-semibold ml-1">
@@ -79,17 +92,16 @@ const Navbar = ({ user }) => {
               </span>
             </span>
 
-            {/* Logout Button */}
-            <Link
+            <button
+              onClick={handleLogout}
               className="px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg border border-red-500/50 text-red-500 hover:bg-red-500/10 transition-colors"
-              to="/logout"
             >
               Logout
-            </Link>
+            </button>
           </div>
         </div>
       ) : (
-        // Not logged in State (Original Login/Register buttons)
+        // Not logged in
         <div className="flex items-center gap-4">
           <Link
             className="px-4 py-2 text-sm font-bold rounded-lg bg-purple-400/20 hover:bg-purple-400/30 text-purple-500 transition-colors"

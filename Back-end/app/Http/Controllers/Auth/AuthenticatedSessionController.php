@@ -29,6 +29,7 @@ class AuthenticatedSessionController extends Controller
         return response()->json([
             'message' => 'User logged in successfully',
             'user' => $user,
+            'roles' => $user->roles->pluck('name'),
             'token' => $token
         ]);
     }
