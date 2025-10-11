@@ -88,7 +88,7 @@ const Navbar = ({ user }) => {
             <span className="text-sm font-bold text-gray-800 dark:text-gray-100 hidden sm:block">
               {user.name}
               <span className="text-purple-500 dark:text-purple-400 font-semibold ml-1">
-                ({formatRole(user.role)})
+                ({formatRole(user.roles[0].name)})
               </span>
             </span>
 

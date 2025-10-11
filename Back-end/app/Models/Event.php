@@ -19,6 +19,7 @@ class Event extends Model
         'end_time',
         'price',
         'status',
+        'image',
         'available_seats',
     ];
 

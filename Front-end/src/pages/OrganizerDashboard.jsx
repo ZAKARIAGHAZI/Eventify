@@ -34,10 +34,12 @@ const OrganizerDashboard = () => {
       return;
     }
 
-    const parsedUser = JSON.parse(storedUser);
-    console.log("Parsed user:", parsedUser);
+    const parsedUser = JSON.parse(storedUser);    
+
+
     // ✅ Only allow organizers
     if (parsedUser.roles[0].name !== "organizer") {
+      console.log("Access denied: Not an organizer");
       navigate("/");
       return;
     }
@@ -208,6 +210,7 @@ const OrganizerDashboard = () => {
 
         {/* Events */}
         {events.length === 0 ? (
+          
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             No events found. Click below to create your first event.
           </div>

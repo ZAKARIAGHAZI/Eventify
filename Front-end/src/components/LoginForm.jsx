@@ -1,48 +1,53 @@
-import React, { useState } from "react";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { CircularProgress } from "@mui/material";
+
+// ✅ Yup schema
+const schema = yup.object().shape({
+  email: yup.string().email("Invalid email").required("Email is required"),
+  password: yup
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .required("Password is required"),
+});
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-
+  const onSubmit = async (data) => {
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/login", {
-        email,
-        password,
-      });
-
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/login",
+        data
+      );
       const { token, user } = response.data;
 
       if (token && user) {
-        // ✅ Store token and user data (with role)
         localStorage.setItem("auth_token", token);
         localStorage.setItem("user", JSON.stringify(user));
 
-        alert(`Welcome back, ${user.name}!`);
         const role = response.data.roles[0]; // "organizer" or "user"
         localStorage.setItem("role", role);
-        console.log("User role:", role);
-        // ✅ Redirect based on role
-        if (role === "organizer") {
-          navigate("/organizer/dashboard");
-        } else {
-          navigate("/explore");
-        }
+
+        if (role === "organizer") navigate("/organizer/dashboard");
+        else navigate("/explore");
       } else {
-        setError("Invalid response from server.");
+        alert("Invalid response from server.");
       }
     } catch (err) {
-      console.error("Login error:", err);
-      setError(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+      console.error(err);
+      alert(err.response?.data?.message || "Login failed. Please try again.");
     }
   };
 
@@ -56,25 +61,31 @@ const LoginForm = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700">
-        <form className="space-y-6" onSubmit={handleLogin}>
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {/* Email */}
           <div>
             <label className="text-sm font-medium" htmlFor="email">
               Email
             </label>
             <input
-              type="email"
               id="email"
+              type="email"
               placeholder="you@example.com"
-              required
-              className="mt-1 block w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 
-              border-transparent focus:ring-purple-400 focus:border-purple-400 
-              placeholder-gray-400 dark:placeholder-gray-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
+              className={`mt-1 block w-full px-4 py-3 rounded-lg border 
+                ${
+                  errors.email
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
+                } 
+                bg-gray-100 dark:bg-gray-700 focus:ring-purple-400 focus:border-purple-400 
+                placeholder-gray-400 dark:placeholder-gray-500`}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           {/* Password */}
@@ -83,28 +94,41 @@ const LoginForm = () => {
               Password
             </label>
             <input
-              type="password"
               id="password"
+              type="password"
               placeholder="••••••••"
-              required
-              className="mt-1 block w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 
-              border-transparent focus:ring-purple-400 focus:border-purple-400 
-              placeholder-gray-400 dark:placeholder-gray-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register("password")}
+              className={`mt-1 block w-full px-4 py-3 rounded-lg border 
+                ${
+                  errors.password
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
+                } 
+                bg-gray-100 dark:bg-gray-700 focus:ring-purple-400 focus:border-purple-400 
+                placeholder-gray-400 dark:placeholder-gray-500`}
             />
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           {/* Submit */}
           <div>
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm 
-              text-sm font-bold text-white bg-purple-500 hover:bg-purple-600 
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 
-              dark:focus:ring-offset-gray-800"
+                text-sm font-bold text-white bg-purple-500 hover:bg-purple-600 
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 
+                dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Log In
+              {isSubmitting ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Log In"
+              )}
             </button>
           </div>
         </form>

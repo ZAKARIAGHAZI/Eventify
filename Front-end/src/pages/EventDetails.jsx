@@ -15,14 +15,21 @@ import Navbar from "../components/Navbar";
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const [user, setUser] = useState(null);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
 
   const isLoggedIn = !!localStorage.getItem("auth_token");
-
+  
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    setUser(storedUser ? JSON.parse(storedUser) : null);
+  }, []);
+  
+  
   // Fetch event details
   const fetchEvent = async () => {
     try {
@@ -129,7 +136,7 @@ const EventDetails = () => {
 
   return (
     <>
-      <Navbar />
+      <Navbar user={user} />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans p-6 md:p-12">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumb */}

@@ -52,7 +52,7 @@ class EventController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|string|url|max:2048',
             'start_time' => 'required|date',
             'end_time' => 'required|date|after_or_equal:start_time',
             'location' => 'required|string',
@@ -61,11 +61,6 @@ class EventController extends Controller
             'available_seats' => 'nullable|integer',
             'status' => 'nullable|in:draft,published,cancelled',
         ]);
-
-        $path = null;
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('events', 'public');
-        }
 
         $event = Event::create([
             'title' => $request->title,
@@ -77,7 +72,7 @@ class EventController extends Controller
             'price' => $request->price ?? 0,
             'available_seats' => $request->available_seats ?? 50,
             'status' => $request->status ?? 'draft',
-            'image' => $path,
+            'image' => $request->image,
             'organizer_id' => auth()->id(),
         ]);
 
@@ -126,6 +121,7 @@ class EventController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|string|max:1000',
+            'image' => 'sometimes|string|url|max:2048',
             'location' => 'sometimes|string|max:255',
             'category' => 'sometimes|string|max:100',
             'start_time' => 'sometimes|date',

@@ -1,25 +1,61 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { Close } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
+import axios from "axios";
+
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+// ✅ Yup validation schema
+const schema = yup.object().shape({
+  title: yup.string().required("Event title is required"),
+  description: yup.string().required("Description is required"),
+  start_date: yup.string().required("Start date is required"),
+  start_time: yup.string().required("Start time is required"),
+  end_date: yup.string().required("End date is required"),
+  end_time: yup.string().required("End time is required"),
+  location: yup.string().required("Location is required"),
+  category: yup.string().required("Category is required"),
+  price: yup.number().min(0, "Price cannot be negative"),
+  available_seats: yup
+    .number()
+    .typeError("Seats must be a number")
+    .positive("Seats must be positive")
+    .required("Available seats required"),
+  image: yup.string().required("Event image is required"),
+});
 
 const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    start_date: "",
-    start_time: "",
-    end_date: "",
-    end_time: "",
-    location: "",
-    category: "",
-    price: "0",
-    available_seats: "",
-    image: "",
-  });
-
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Fill form when editing or reset when creating
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      title: "",
+      description: "",
+      start_date: "",
+      start_time: "",
+      end_date: "",
+      end_time: "",
+      location: "",
+      category: "",
+      price: 0,
+      available_seats: "",
+      image: "",
+    },
+  });
+
+  // Prefill when editing
   useEffect(() => {
     if (event && mode === "edit") {
       const [startDate, startTime] = event.start_time
@@ -28,7 +64,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
       const [endDate, endTime] = event.end_time
         ? event.end_time.split("T")
         : ["", ""];
-      setFormData({
+      reset({
         title: event.title || "",
         description: event.description || "",
         start_date: startDate,
@@ -37,41 +73,43 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
         end_time: endTime,
         location: event.location || "",
         category: event.category || "",
-        price: event.price || "0",
+        price: event.price || 0,
         available_seats: event.available_seats || "",
         image: event.image || "",
       });
-    } else if (mode === "create") {
-      setFormData({
-        title: "",
-        description: "",
-        start_date: "",
-        start_time: "",
-        end_date: "",
-        end_time: "",
-        location: "",
-        category: "",
-        price: "0",
-        available_seats: "",
-        image: "",
-      });
+    } else {
+      reset();
     }
-  }, [event, mode, isOpen]);
+  }, [event, mode, reset]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  // ✅ Handle image upload to Cloudinary
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+
+    const formDataImg = new FormData();
+    formDataImg.append("file", file);
+    formDataImg.append("upload_preset", UPLOAD_PRESET);
+
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        formDataImg
+      );
+      setValue("image", res.data.secure_url);
+    } catch (err) {
+      console.error("Cloudinary upload error:", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Combine date + time into datetime strings
-    const start_time = `${formData.start_date} ${formData.start_time}`;
-    const end_time = `${formData.end_date} ${formData.end_time}`;
+  // ✅ Handle form submission
+  const onFormSubmit = async (data) => {
+    const start_time = `${data.start_date} ${data.start_time}`;
+    const end_time = `${data.end_date} ${data.end_time}`;
 
     if (new Date(end_time) < new Date(start_time)) {
       alert("End time cannot be before start time");
@@ -81,12 +119,13 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
     setLoading(true);
     try {
       await onSubmit({
-        ...formData,
+        ...data,
         start_time,
         end_time,
-        price: parseFloat(formData.price) || 0,
+        price: parseFloat(data.price) || 0,
       });
       onClose();
+      reset();
     } catch (error) {
       console.error("Form submission error:", error);
     } finally {
@@ -114,7 +153,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
 
         {/* Form */}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onFormSubmit)}
           className="p-6 space-y-6 max-h-[70vh] overflow-y-auto"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -124,14 +163,16 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
                 Event Title *
               </label>
               <input
+                {...register("title")}
                 type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                required
                 className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Enter event title"
               />
+              {errors.title && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.title.message}
+                </p>
+              )}
             </div>
 
             {/* Description */}
@@ -140,99 +181,106 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
                 Description *
               </label>
               <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
+                {...register("description")}
                 rows="4"
                 className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Describe your event"
               />
+              {errors.description && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
 
-            {/* Start Date + Time */}
+            {/* Date & Time */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Start Date *
               </label>
               <input
                 type="date"
-                name="start_date"
-                value={formData.start_date}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("start_date")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.start_date && (
+                <p className="text-red-500 text-sm">
+                  {errors.start_date.message}
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Start Time *
               </label>
               <input
                 type="time"
-                name="start_time"
-                value={formData.start_time}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("start_time")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.start_time && (
+                <p className="text-red-500 text-sm">
+                  {errors.start_time.message}
+                </p>
+              )}
             </div>
 
-            {/* End Date + Time */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 End Date *
               </label>
               <input
                 type="date"
-                name="end_date"
-                value={formData.end_date}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("end_date")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.end_date && (
+                <p className="text-red-500 text-sm">
+                  {errors.end_date.message}
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 End Time *
               </label>
               <input
                 type="time"
-                name="end_time"
-                value={formData.end_time}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("end_time")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.end_time && (
+                <p className="text-red-500 text-sm">
+                  {errors.end_time.message}
+                </p>
+              )}
             </div>
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Location *
               </label>
               <input
                 type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Event location"
+                {...register("location")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.location && (
+                <p className="text-red-500 text-sm">
+                  {errors.location.message}
+                </p>
+              )}
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Category *
               </label>
               <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                {...register("category")}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">Select category</option>
                 <option value="tech">Technology</option>
@@ -242,55 +290,67 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
                 <option value="sports">Sports</option>
                 <option value="community">Community</option>
               </select>
+              {errors.category && (
+                <p className="text-red-500 text-sm">
+                  {errors.category.message}
+                </p>
+              )}
             </div>
 
             {/* Price */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Price (MAD)
               </label>
               <input
                 type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
+                {...register("price")}
                 min="0"
-                step="0.01"
-                placeholder="0 if free"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 dark:bg-gray-700"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.price && (
+                <p className="text-red-500 text-sm">{errors.price.message}</p>
+              )}
             </div>
 
-            {/* Available Seats */}
+            {/* Seats */}
             <div>
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-semibold mb-2">
                 Available Seats *
               </label>
               <input
                 type="number"
-                name="available_seats"
-                value={formData.available_seats}
-                onChange={handleChange}
+                {...register("available_seats")}
                 min="1"
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Number of seats"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {errors.available_seats && (
+                <p className="text-red-500 text-sm">
+                  {errors.available_seats.message}
+                </p>
+              )}
             </div>
 
-            {/* Image */}
+            {/* Image Upload */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                Image URL
+              <label className="block text-sm font-semibold mb-2">
+                Upload Event Image *
               </label>
               <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
+              {uploading && (
+                <div className="mt-2 text-sm text-gray-500 flex items-center gap-2">
+                  <CircularProgress size={16} color="inherit" />
+                  Uploading image...
+                </div>
+              )}
+              {errors.image && (
+                <p className="text-red-500 text-sm">{errors.image.message}</p>
+              )}
             </div>
           </div>
 
@@ -305,7 +365,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex-1 px-6 py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {loading ? (
