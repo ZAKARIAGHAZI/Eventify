@@ -232,34 +232,79 @@ const EventDetails = () => {
               </section>
             </div>
 
+            
             {/* Sidebar */}
             <aside>
               <div className="sticky top-10 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-gray-700">
                 <h3 className="font-bold text-2xl mb-5">Event Snapshot</h3>
                 <ul className="space-y-4">
+                  {/* Start Date */}
                   <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <Event className="text-purple-600 mt-1" />
                     <div>
-                      <span className="font-semibold text-sm block">Date</span>
-                      <p>{new Date(event.date).toLocaleDateString()}</p>
+                      <span className="font-semibold text-sm block">
+                        Start Date
+                      </span>
+                      <p>
+                        {event.start_time
+                          ? new Date(event.start_time).toLocaleDateString()
+                          : "TBD"}
+                      </p>
                     </div>
                   </li>
+
+                  {/* End Date */}
+                  <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <Event className="text-purple-600 mt-1" />
+                    <div>
+                      <span className="font-semibold text-sm block">
+                        End Date
+                      </span>
+                      <p>
+                        {event.end_time
+                          ? new Date(event.end_time).toLocaleDateString()
+                          : "TBD"}
+                      </p>
+                    </div>
+                  </li>
+
+                  {/* Time */}
                   <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <AccessTime className="text-purple-600 mt-1" />
                     <div>
                       <span className="font-semibold text-sm block">Time</span>
-                      <p>{event.time || "9:00 AM - 5:00 PM"}</p>
+                      <p>
+                        {event.start_time && event.end_time
+                          ? `${new Date(event.start_time).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )} - ${new Date(event.end_time).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}`
+                          : "9:00 AM - 5:00 PM"}
+                      </p>
                     </div>
                   </li>
+
+                  {/* Location */}
                   <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <LocationOn className="text-purple-600 mt-1" />
                     <div>
                       <span className="font-semibold text-sm block">
                         Location
                       </span>
-                      <p>{event.location}</p>
+                      <p>{event.location || "TBD"}</p>
                     </div>
                   </li>
+
+                  {/* Organizer */}
                   <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <Business className="text-purple-600 mt-1" />
                     <div>
@@ -273,6 +318,8 @@ const EventDetails = () => {
                       </p>
                     </div>
                   </li>
+
+                  {/* Category */}
                   <li className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <Category className="text-purple-600 mt-1" />
                     <div>

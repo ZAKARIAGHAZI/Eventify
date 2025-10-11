@@ -35,9 +35,9 @@ const OrganizerDashboard = () => {
     }
 
     const parsedUser = JSON.parse(storedUser);
-
+    console.log("Parsed user:", parsedUser);
     // ✅ Only allow organizers
-    if (parsedUser.role !== "organizer") {
+    if (parsedUser.roles[0].name !== "organizer") {
       navigate("/");
       return;
     }

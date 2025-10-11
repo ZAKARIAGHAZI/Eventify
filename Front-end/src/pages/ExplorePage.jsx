@@ -13,7 +13,7 @@ const ExploreEvents = () => {
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const eventsPerPage = 5; // must match backend
+  const eventsPerPage = 5; 
 
   const fetchEvents = async (pageNumber = 1) => {
     setLoading(true);
@@ -40,7 +40,7 @@ const ExploreEvents = () => {
 
   useEffect(() => {
     fetchEvents(page);
-  }, [filters, searchTerm, page]);
+  }, [page]);
 
   // Reset to page 1 whenever filters or search term change
   useEffect(() => {

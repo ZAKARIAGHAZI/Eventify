@@ -128,7 +128,7 @@ class EventController extends Controller
             'description' => 'sometimes|string|max:1000',
             'location' => 'sometimes|string|max:255',
             'category' => 'sometimes|string|max:100',
-            'start_time' => 'sometimes|date|after:now',
+            'start_time' => 'sometimes|date',
             'end_time' => 'sometimes|date|after:start_time',
             'price' => 'sometimes|numeric|min:0',
             'available_seats' => 'sometimes|integer|min:1',
@@ -260,15 +260,21 @@ class EventController extends Controller
 
     public function organizerEvents(Request $request)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user(); // currently authenticated organizer
 
-        // Get only events created by this organizer
-        $events = Event::where('user_id', $user->id)
-            ->orderBy('date', 'desc')
-            ->get();
+            // Get events created by this organizer
+            $events = Event::where('organizer_id', $user->id)
+                ->orderBy('start_time', 'desc') // use start_time for ordering
+                ->get();
 
-        return response()->json([
-            'events' => $events
-        ]);
+            return response()->json([
+                'events' => $events
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -6,28 +6,38 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    date: "",
-    time: "",
+    start_date: "",
+    start_time: "",
+    end_date: "",
+    end_time: "",
     location: "",
     category: "",
     price: "0",
-    price_type: "free",
     available_seats: "",
     image: "",
   });
+
   const [loading, setLoading] = useState(false);
 
+  // Fill form when editing or reset when creating
   useEffect(() => {
     if (event && mode === "edit") {
+      const [startDate, startTime] = event.start_time
+        ? event.start_time.split("T")
+        : ["", ""];
+      const [endDate, endTime] = event.end_time
+        ? event.end_time.split("T")
+        : ["", ""];
       setFormData({
         title: event.title || "",
         description: event.description || "",
-        date: event.date || "",
-        time: event.time || "",
+        start_date: startDate,
+        start_time: startTime,
+        end_date: endDate,
+        end_time: endTime,
         location: event.location || "",
         category: event.category || "",
         price: event.price || "0",
-        price_type: event.price_type || "free",
         available_seats: event.available_seats || "",
         image: event.image || "",
       });
@@ -35,12 +45,13 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
       setFormData({
         title: "",
         description: "",
-        date: "",
-        time: "",
+        start_date: "",
+        start_time: "",
+        end_date: "",
+        end_time: "",
         location: "",
         category: "",
         price: "0",
-        price_type: "free",
         available_seats: "",
         image: "",
       });
@@ -52,15 +63,29 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "price_type" && value === "free" ? { price: "0" } : {}),
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Combine date + time into datetime strings
+    const start_time = `${formData.start_date} ${formData.start_time}`;
+    const end_time = `${formData.end_date} ${formData.end_time}`;
+
+    if (new Date(end_time) < new Date(start_time)) {
+      alert("End time cannot be before start time");
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        start_time,
+        end_time,
+        price: parseFloat(formData.price) || 0,
+      });
       onClose();
     } catch (error) {
       console.error("Form submission error:", error);
@@ -74,6 +99,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl my-8">
+        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             {mode === "edit" ? "Edit Event" : "Create New Event"}
@@ -86,11 +112,13 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
           </button>
         </div>
 
+        {/* Form */}
         <form
           onSubmit={handleSubmit}
           className="p-6 space-y-6 max-h-[70vh] overflow-y-auto"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Title */}
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Event Title *
@@ -106,6 +134,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
               />
             </div>
 
+            {/* Description */}
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Description *
@@ -121,34 +150,63 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
               />
             </div>
 
+            {/* Start Date + Time */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                Date *
+                Start Date *
               </label>
               <input
                 type="date"
-                name="date"
-                value={formData.date}
+                name="start_date"
+                value={formData.start_date}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
-
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                Time *
+                Start Time *
               </label>
               <input
                 type="time"
-                name="time"
-                value={formData.time}
+                name="start_time"
+                value={formData.start_time}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
+            {/* End Date + Time */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                End Date *
+              </label>
+              <input
+                type="date"
+                name="end_date"
+                value={formData.end_date}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                End Time *
+              </label>
+              <input
+                type="time"
+                name="end_time"
+                value={formData.end_time}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Location */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Location *
@@ -164,6 +222,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
               />
             </div>
 
+            {/* Category */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Category *
@@ -185,6 +244,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
               </select>
             </div>
 
+            {/* Price */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Price (MAD)
@@ -196,17 +256,12 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                disabled={formData.price_type === "free"}
-                required={formData.price_type === "paid"}
-                className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  formData.price_type === "free"
-                    ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-400"
-                    : "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                }`}
-                placeholder="Enter price (0 if free)"
+                placeholder="0 if free"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 dark:bg-gray-700"
               />
             </div>
 
+            {/* Available Seats */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Available Seats *
@@ -223,6 +278,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
               />
             </div>
 
+            {/* Image */}
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                 Image URL
@@ -238,6 +294,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, event, mode }) => {
             </div>
           </div>
 
+          {/* Buttons */}
           <div className="flex gap-4 pt-4">
             <button
               type="button"
