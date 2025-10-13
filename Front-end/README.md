@@ -1,16 +1,79 @@
-# React + Vite
+# Eventify Front-End
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the front-end for **Eventify**, a modern event management platform. Built with React and Vite, it provides a responsive user interface for browsing, creating, and managing events.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- User authentication (login/register)
+- Explore events with search and filters
+- Event details and registration
+- Organizer dashboard for event management
+- Responsive design with Tailwind CSS
+- API integration with Eventify back-end
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Requirements
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Node.js >= 18
+- npm >= 9
+
+---
+
+## Setup Instructions
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/eventify-frontend.git
+   cd eventify-frontend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   - Copy `.env.example` to `.env` and set your API base URL.
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## Project Structure
+
+```
+src/
+  assets/                # Images and static assets
+  components/            # Reusable UI components
+  contexts/              # React context providers
+  pages/                 # Application pages (Explore, landing page, etc.)
+  App.jsx                # Main app component
+  main.jsx               # Entry point
+  App.css, index.css     # Global styles
+```
+
+---
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+
+---
+
+## License
+
+This project is open-source and available under the [MIT License](LICENSE).
+
+---
+
+## Contact
+
+For questions or support, open an issue or contact the maintainer.
